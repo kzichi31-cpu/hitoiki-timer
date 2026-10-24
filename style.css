@@ -1,0 +1,50 @@
+:root{color-scheme:light;--green:#234c40;--ink:#263b32;--cream:#f6f3e9;--line:#dddcd0;--muted:#626b60}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif}main{max-width:1080px;padding:44px 28px;margin:auto}h1,h2,h3,p{margin:0}h1{font-size:32px;letter-spacing:.06em}h2{font-size:19px;margin-bottom:14px}h3{font-size:14px;font-weight:500}button,input,select,textarea{font:inherit}button{border:1px solid var(--green);border-radius:10px;background:var(--green);color:#fff;min-height:46px;padding:10px 21px;cursor:pointer;font-weight:600}button:hover{filter:brightness(.94)}button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #bb8d2f;outline-offset:3px}.outline{background:transparent;color:var(--green)}.soft{background:#e6ece4;color:var(--green);border-color:#e6ece4}.danger{color:#993d40;border-color:#d7a9ab;background:#fff}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;gap:16px}.eyebrow{font-size:11px;letter-spacing:.19em;color:var(--green);font-weight:700;margin-bottom:8px}.top p:not(.eyebrow){color:var(--muted);margin-top:8px}.mascot{display:inline-block;font-size:30px;background:#e9dfbd;border-radius:50%;width:50px;text-align:center;margin-left:16px}.local-label{font-size:12px;border:1px solid #bcc9b9;border-radius:30px;padding:6px 14px;white-space:nowrap}.card{background:#fffcf5;border:1px solid var(--line);border-radius:20px;padding:26px;margin-bottom:24px}.timer-card{border-top:5px solid var(--green)}.section-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.section-head h2{margin-bottom:0}.badge{background:#e7ecdf;border-radius:24px;font-size:12px;padding:4px 14px}.timer{text-align:center;font-variant-numeric:tabular-nums;font-size:clamp(44px,8vw,70px);font-weight:600;line-height:1.3;letter-spacing:.04em;margin-top:22px}.timer-caption{text-align:center;font-size:13px;color:var(--muted)}#timer-details{text-align:center;margin:13px 0 22px}.form-grid{display:grid;grid-template-columns:1fr 2fr;gap:16px}label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}input,select,textarea{width:100%;min-width:0;border:1px solid #cbcfc1;border-radius:9px;padding:11px 12px;color:var(--ink);background:#fffef9}input:disabled{background:#eeeee5}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.hint{font-size:12px;color:var(--muted);margin-top:14px}.muted{font-size:13px;color:var(--muted)}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.stat{border-radius:16px;padding:20px 22px}.stat strong{display:block;font-size:26px;font-variant-numeric:tabular-nums;margin-top:6px}.pink{background:#eededc}.blue{background:#dee9ed}.mustard{background:#eee3b9}small{font-size:11px;margin-left:4px}.summary+.hint{margin-bottom:24px}.lower-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:24px}.lower-grid .card{min-width:0}.month-label{max-width:170px}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:20px}.weekday{text-align:center;font-size:11px;color:var(--muted);padding-bottom:4px}.day{padding:7px 2px;border:1px solid transparent;background:#f2f1e9;color:var(--ink);font-size:13px;min-height:72px;font-weight:400;border-radius:8px}.day span{display:block;font-size:10px;white-space:nowrap}.day.selected{border:2px solid var(--green);background:#e3e9dc}.day.today{box-shadow:inset 0 3px #bb8d2f}.category-row{margin-top:16px}.category-line{display:flex;justify-content:space-between;gap:12px;font-size:13px}.bar{height:5px;border-radius:5px;background:#eeeede;margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;background:#618574;border-radius:5px}.record{border-top:1px solid var(--line);padding:20px 0 10px;margin-top:16px}.record-head{display:flex;justify-content:space-between;gap:12px}.record h3{font-weight:700;font-size:16px}.record strong{font-size:19px}.record .memo{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0}.record .actions{margin-top:8px}.record button{font-size:12px;padding:6px 14px;min-height:38px}.empty{padding:30px 0;text-align:center;color:var(--muted);font-size:14px}.backup .actions{margin-top:14px}footer{font-size:12px;color:var(--muted);padding:10px 4px;display:flex;justify-content:space-between;gap:15px}dialog{width:min(560px,calc(100% - 24px));border:1px solid var(--line);border-radius:18px;padding:28px;background:#fffcf5;color:var(--ink);max-height:90vh}dialog::backdrop{background:#152c2577}dialog label{margin:14px 0}dialog .form-grid{grid-template-columns:1fr 1fr;gap:12px}#edit-error{color:#9a3038;font-size:13px}#message{border:1px solid #94af8c;background:#e8efdf;border-radius:10px;padding:12px 16px;margin-bottom:20px;white-space:pre-wrap}#message.error{border-color:#be7979;background:#f4dedd}[hidden]{display:none!important}@media(max-width:700px){main{padding:24px 14px}.top{align-items:flex-start}.local-label{display:none}h1{font-size:26px}.mascot{font-size:24px;width:40px;margin-left:9px}.card{padding:20px 16px}.form-grid{grid-template-columns:1fr}.summary{gap:8px}.stat{padding:14px 10px}.stat strong{font-size:19px}.lower-grid{grid-template-columns:1fr;gap:0}.actions button{flex:1}.day{min-height:66px}.day span{font-size:9px}footer{flex-direction:column}dialog .form-grid{grid-template-columns:1fr}}
+/* 実働時間のみを大きく表示。停止中は枠色と文字で示す。 */
+.timer-clocks{display:grid;grid-template-columns:1fr;gap:18px;margin:24px 0 12px}.clock-panel{padding:18px 10px;border:2px solid transparent;border-radius:16px;background:#f0f1e8}.clock-panel .timer{font-size:clamp(44px,8vw,70px);margin-top:8px}.is-working .work-clock{border-color:var(--green)}.is-paused .work-clock{border-color:#a65e61;background:#f3e6e2}.is-paused+.muted{color:#8c4348}.badge{font-weight:700}.result-card{border-top:5px solid var(--green);background:#f4f7eb}.result-category{text-align:center;font-size:20px;font-weight:600;margin:20px 0 14px}.result-card .timer{margin:6px 0 24px}.result-details{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0}.result-details div{padding:12px;background:#fffcf5;border-radius:10px}.result-details dt{font-size:12px;color:var(--muted)}.result-details dd{margin:4px 0 0;font-weight:600;font-variant-numeric:tabular-nums}.group-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.group-stat{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 14px;background:#eef0e5;border-radius:10px;font-size:13px}.group-stat strong{font-size:17px;font-variant-numeric:tabular-nums}.daily-groups{margin-top:20px}.daily-groups h3{font-weight:600}.daily-groups>div{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.group-grid+.muted,.daily-groups>.muted{margin:12px 0;font-weight:600}@media(max-width:700px){.timer-clocks{gap:8px}.clock-panel{padding:16px 5px}.clock-panel .timer{font-size:clamp(36px,10vw,60px)}.group-grid,.daily-groups>div{grid-template-columns:1fr 1fr}.group-stat{padding:10px}.group-stat strong{font-size:16px}.result-details{grid-template-columns:1fr}}
+
+/* iPhoneの縦・横画面と文字の拡大に対応。内容を隠さず折り返す。 */
+html{-webkit-text-size-adjust:100%}
+main{padding-top:max(44px,env(safe-area-inset-top));padding-bottom:max(28px,env(safe-area-inset-bottom))}
+main>*{min-width:0}
+button{touch-action:manipulation;overflow-wrap:anywhere}
+input,select,textarea{max-width:100%;min-inline-size:0}
+.record-head,.category-line{flex-wrap:wrap}
+.record-head>*{min-width:0}
+.record h3,.muted,.hint,.result-category,.result-details dd,.group-stat,.category-line,#message{overflow-wrap:anywhere}
+.timer{max-width:100%;overflow-wrap:anywhere}
+.form-grid,.group-grid,.daily-groups>div{min-width:0}
+.form-grid>*,.group-grid>*,.daily-groups>div>*{min-width:0}
+@media(max-width:700px){
+  main{padding-top:max(24px,env(safe-area-inset-top));padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  input,select,textarea{font-size:16px;min-height:48px}
+  button,.record button{min-height:48px;font-size:15px}
+  .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .actions button{min-width:0;width:100%;padding:12px 10px}
+  #start,#exercise-start,#exercise-finish,#result-close{grid-column:1/-1}
+  .calendar{gap:3px}
+  .day{font-size:14px;min-height:76px;padding:6px 0}
+  .day span{font-size:10px;white-space:normal;overflow-wrap:anywhere}
+  dialog{max-width:calc(100% - 24px);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);padding:20px 16px;overflow-y:auto;overscroll-behavior:contain}
+  dialog .form-grid{grid-template-columns:minmax(0,1fr)}
+  dialog .actions button{font-size:14px}
+  .group-grid,.daily-groups>div{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .section-head>label{max-width:100%;min-width:0}
+}
+@media(max-width:430px){
+  .summary{grid-template-columns:minmax(0,1fr)}
+  .stat{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .stat strong{font-size:23px;margin-top:0}
+  .card{padding:20px 14px}
+  .record-head{flex-direction:column;gap:4px}
+  .record strong{font-size:18px}
+  .section-head{gap:12px}
+}
+@media(max-width:380px){
+  /* さらに狭い画面では日付を4列にし、44px以上のタップ幅を確保。 */
+  .calendar{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .calendar .weekday,.calendar>div:empty{display:none}
+  .group-grid,.daily-groups>div{grid-template-columns:minmax(0,1fr)}
+}
+/* 横向きのノッチと、幅が広いタッチ端末にも対応。 */
+@media(min-width:701px){main{padding-left:max(28px,env(safe-area-inset-left));padding-right:max(28px,env(safe-area-inset-right))}}
+@media(pointer:coarse){button,.record button{min-height:48px;font-size:15px}input,select,textarea{font-size:16px;min-height:48px}}

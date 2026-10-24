@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#234c40">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ひと息タイマー">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <title>ひと息タイマー | 作業時間の記録</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="categories.js" defer></script><script src="core.js" defer></script><script src="app.js" defer></script><script src="pwa.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="top"><div><p class="eyebrow">WORK & A LITTLE TEA</p><h1>ひと息タイマー<span class="mascot" aria-hidden="true">♨</span></h1><p>今日の積み重ねを、ゆっくり記録。</p></div><span class="local-label">このブラウザに保存</span></header>
+    <div id="message" role="status" aria-live="polite" hidden></div>
+    <section id="timer-card" class="card timer-card" aria-labelledby="timer-title">
+      <div class="section-head"><h2 id="timer-title">いまの作業</h2><span id="timer-status" class="badge">準備中</span></div>
+      <div id="timer-clocks" class="timer-clocks"><div class="clock-panel work-clock"><p class="timer-caption">実働時間</p><div class="timer" id="elapsed" role="timer" aria-label="実働時間">00:00:00</div></div></div>
+      <p id="timer-details" class="muted">カテゴリを選んで、はじめましょう。</p>
+      <div id="timer-form" class="form-grid"><label>カテゴリ<select id="category"></select></label><label>メモ<input id="memo" maxlength="2000" placeholder="取り組むこと、気づいたこと"></label></div>
+      <div class="actions"><button id="start">作業開始</button><button id="pause" class="soft" hidden>一時停止</button><button id="resume" class="soft" hidden>再開</button><button id="exercise-start" class="soft" hidden>ストレッチ＆運動</button><button id="exercise-finish" hidden>運動終了・元の作業に戻る</button><button id="stop" class="outline" hidden>終了して保存</button></div>
+      <p class="hint">一時停止中は実働時間が増えません。画面を開き直しても停止したままです。「再開」で計測を続けられます。</p>
+    </section>
+    <section id="result-card" class="card result-card" aria-labelledby="result-title" hidden>
+      <div class="section-head"><h2 id="result-title" tabindex="-1">おつかれさまでした！</h2><span class="badge">保存完了</span></div>
+      <p id="result-category" class="result-category"></p>
+      <p class="timer-caption">今回の実働時間</p><div id="result-work" class="timer"></div>
+      <dl class="result-details"><div><dt>開始時刻</dt><dd id="result-start"></dd></div><div><dt>終了時刻</dt><dd id="result-end"></dd></div></dl>
+      <div class="actions"><button id="result-close">確認して閉じる</button></div>
+    </section>
+    <section aria-labelledby="summary-title"><h2 id="summary-title">積み重ねた時間</h2><div class="summary"><article class="stat pink"><h3>今日</h3><strong id="today-total">0時間00分</strong></article><article class="stat blue"><h3>今週 <small>月〜日</small></h3><strong id="week-total">0時間00分</strong></article><article class="stat mustard"><h3>今月</h3><strong id="month-total">0時間00分</strong></article></div><p class="hint">実働時間の合計（計測中も含む）。1分未満は切り捨てて表示します。</p></section>
+    <section class="card" aria-labelledby="group-title"><h2 id="group-title">月別の活動グループ</h2><p id="group-period" class="muted"></p><div id="month-group-totals" class="group-grid"></div><p id="month-group-total" class="muted"></p><p class="hint">実働時間を秒単位で表示。下の「表示月」で月を切り替えられます。計測中も含みます。</p></section>
+    <div class="lower-grid"><section class="card" aria-labelledby="month-title"><div class="section-head"><h2 id="month-title">月間の記録</h2><label class="month-label">表示月<input type="month" id="month"></label></div><div id="calendar" class="calendar"></div><p class="hint">日付を選ぶと、その日の詳細が表示されます。回数はその日に実働がある記録数です。</p></section><section class="card" aria-labelledby="categories-title"><h2 id="categories-title">カテゴリ別</h2><p class="muted" id="category-period"></p><div id="category-totals"></div></section></div>
+    <section class="card" aria-labelledby="records-title"><div class="section-head"><h2 id="records-title">日ごとの詳細</h2><label>表示日<input type="date" id="selected-day"></label></div><div class="daily-groups"><h3>この日の活動グループ別</h3><div id="day-group-totals"></div><p class="muted" id="day-group-total"></p></div><div id="records"></div></section>
+    <section class="card backup" aria-labelledby="backup-title"><div><h2 id="backup-title">大切な記録のバックアップ</h2><p class="muted">JSONファイルを保存して、記録を手元にも。復元は既存の記録に追加します。</p></div><div class="actions"><button id="export" class="outline">バックアップを保存</button><button id="import-button" class="soft">JSONから復元</button><input id="import" type="file" accept="application/json,.json" hidden></div><p class="hint">同じブラウザ・同じファイルの場所でご利用ください。ブラウザのデータ消去前やアプリの移動前には、バックアップを保存してください。</p></section>
+    <footer>ひと息つきながら、今日もひとつずつ。<span>01_WorkTimer · 個人用作業記録</span></footer>
+  </main>
+  <dialog id="edit-dialog"><form id="edit-form"><h2>記録を編集</h2><input id="edit-id" type="hidden"><label>カテゴリ<select id="edit-category"></select></label><div class="form-grid"><label>開始時刻<input type="datetime-local" step="1" id="edit-start" required></label><label>終了時刻<input type="datetime-local" step="1" id="edit-end" required></label></div><label>実働時間（分）<input id="edit-work" type="number" min="0" step="any" required></label><label>メモ<textarea id="edit-memo" maxlength="2000" rows="3"></textarea></label><p class="hint">開始・終了時刻を変えても、実働時間は自動で増減しません。実働時間は開始から終了までの範囲内で入力してください。日付をまたぐ編集記録は、各日の経過時間に比例して配分します。</p><p id="edit-error" role="alert"></p><div class="actions"><button type="submit">変更を保存</button><button type="button" id="edit-cancel" class="outline">キャンセル</button></div></form></dialog>
+</body></html>

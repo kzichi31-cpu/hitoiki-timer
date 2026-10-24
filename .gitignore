@@ -1,0 +1,18 @@
+# 公開を許可したファイルだけをGit管理する
+/*
+!/.gitignore
+!/.nojekyll
+!/README.md
+!/index.html
+!/style.css
+!/categories.js
+!/core.js
+!/app.js
+!/pwa.js
+!/sw.js
+!/manifest.webmanifest
+!/icons/
+/icons/*
+!/icons/apple-touch-icon.png
+!/icons/icon-192.png
+!/icons/icon-512.png
