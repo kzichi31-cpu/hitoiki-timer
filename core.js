@@ -20,6 +20,16 @@
     }
     return Math.max(0, span - r.breaks.reduce((n, p) => n + overlap(p.start, p.end ?? end, from, to), 0));
   }
+  // 保存済みの停止区間だけで、新しい日時の実働を確定できるか判定する。
+  function editTiming(r, start, end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) throw new Error('終了時刻は開始時刻以降にしてください。');
+    if (start === r.start && end === r.end) return { work: duration(r).work, breaks: r.breaks, manualBreakMs: r.manualBreakMs, needsManual: false };
+    const hasStops = duration(r).rest > 0;
+    if (hasStops && (r.manualBreakMs != null || start < r.start || end > r.end)) return { needsManual: true };
+    const breaks = r.breaks.map(p => ({ start: Math.max(start,p.start), end: Math.min(end,p.end) })).filter(p => p.end > p.start);
+    const rest = breaks.reduce((n,p) => n + p.end-p.start,0);
+    return { work: end-start-rest, breaks, needsManual: false };
+  }
   function validateRecord(r, active = false) {
     if (!r || typeof r.id !== 'string' || !r.id || (typeof r.category !== 'string' || !r.category.trim()) || typeof r.memo !== 'string' || !Number.isFinite(r.start) || !Number.isFinite(new Date(r.start).getTime())) throw new Error('記録の形式が正しくありません。');
     if (active ? r.end !== null : !Number.isFinite(r.end) || !Number.isFinite(new Date(r.end).getTime()) || r.end < r.start) throw new Error('開始・終了時刻が正しくありません。');
@@ -69,7 +79,7 @@
     }
     return { state: result, added, conflicts };
   }
-  const api = { categories, groups, groupOf, categoryLabel, categoryId, groupTotals, uid, duration, workIn, validateState, validateRecord, merge };
+  const api = { categories, groups, groupOf, categoryLabel, categoryId, groupTotals, uid, duration, workIn, editTiming, validateState, validateRecord, merge };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WorkTimer = api;
 })(globalThis);

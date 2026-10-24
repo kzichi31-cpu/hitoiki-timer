@@ -1,7 +1,7 @@
 'use strict';
 // アプリのコードを変更したリリースでは、この番号を更新する。
 const CACHE_PREFIX = 'worktimer-shell-' + encodeURIComponent(self.registration.scope) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v1';
+const CACHE_NAME = CACHE_PREFIX + 'v2';
 const ASSETS = [
   './index.html', './style.css', './categories.js', './core.js', './app.js',
   './pwa.js', './manifest.webmanifest', './icons/icon-192.png',

@@ -48,3 +48,5 @@ input,select,textarea{max-width:100%;min-inline-size:0}
 /* 横向きのノッチと、幅が広いタッチ端末にも対応。 */
 @media(min-width:701px){main{padding-left:max(28px,env(safe-area-inset-left));padding-right:max(28px,env(safe-area-inset-right))}}
 @media(pointer:coarse){button,.record button{min-height:48px;font-size:15px}input,select,textarea{font-size:16px;min-height:48px}}
+
+.work-input{min-width:0;border:1px solid var(--line);border-radius:10px;margin:16px 0 0;padding:10px 12px}.work-input legend{font-size:13px;font-weight:600}.work-units{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.work-units label{min-width:0;margin:0}.confirm-work{flex-direction:row;align-items:center;gap:10px}.confirm-work input{width:24px;min-height:24px;flex:0 0 24px}#edit-calculation{overflow-wrap:anywhere}
