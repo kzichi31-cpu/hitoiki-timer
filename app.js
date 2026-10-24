@@ -89,15 +89,14 @@ function renderCalendar() {
   for(let n=0;n<(start.getDay()+6)%7;n++) calendar.append(document.createElement('div'));
   for(let day=1;day<=new Date(y,m,0).getDate();day++) {
     const d = new Date(y,m-1,day); const key=dateKey(d); const [from,to]=rangeDay(key);
-    const records=allRecords().filter(r => W.workIn(r,from,to)>0 || (r.start>=from && r.start<to));
     const button=document.createElement('button'); button.type='button'; button.className='day';
     if(key===$('selected-day').value) button.classList.add('selected');
     if(key===dateKey(new Date())) button.classList.add('today');
     button.setAttribute('aria-pressed', String(key===$('selected-day').value));
-    const total=sum(from,to); button.setAttribute('aria-label',`${m}月${day}日 ${hours(total)} ${records.length}回`);
+    const total=sum(from,to); button.setAttribute('aria-label',`${m}月${day}日 ${hours(total)}`);
     button.append(String(day));
     const value=document.createElement('span'); value.textContent=total>0 ? hours(total).replace('時間','h ').replace('分','m') : '—';
-    const count=document.createElement('span'); count.textContent=records.length ? `${records.length}回` : '　'; button.append(value,count);
+    button.append(value);
     button.onclick=()=>{ $('selected-day').value=key; renderCalendar(); renderRecords(); };
     calendar.append(button);
   }
@@ -190,9 +189,18 @@ function updateEditTimes() {
     if(!timing.needsManual){putWork(timing.work);editSession.workTouched=false;}
   }catch(error){$('edit-calculation').textContent=error.message;}
 }
+function editSignature() {
+  const fields=['edit-category','edit-start','edit-end','edit-hours','edit-minutes','edit-seconds','edit-memo'];
+  let work;try{work=readWork();}catch{work='invalid';}
+  return JSON.stringify({values:fields.map(id=>$(id).value),confirmed:!!$('edit-confirm').checked,work});
+}
+function requestCloseEdit() {
+  if(editSession && editSignature()!==editSession.initialForm && !confirm('未保存の変更があります。変更を破棄して閉じますか？'))return;
+  $('edit-dialog').close();editSession=null;
+}
 function openEdit(r) {
   editSession={id:r.id,workTouched:false};
-  $('edit-id').value=r.id;$('edit-category').value=W.categoryId(r.category);$('edit-start').value=localInput(r.start);$('edit-end').value=localInput(r.end);putWork(W.duration(r).work);$('edit-memo').value=r.memo;$('edit-error').textContent='';$('edit-confirm').checked=false;$('edit-confirm-label').hidden=true;$('edit-calculation').textContent='実働時間は時間・分・秒で手動調整できます。';editSession.dates=[$('edit-start').value,$('edit-end').value].join('|');$('edit-dialog').showModal();
+  $('edit-id').value=r.id;$('edit-category').value=W.categoryId(r.category);$('edit-start').value=localInput(r.start);$('edit-end').value=localInput(r.end);putWork(W.duration(r).work);$('edit-memo').value=r.memo;$('edit-error').textContent='';$('edit-confirm').checked=false;$('edit-confirm-label').hidden=true;$('edit-calculation').textContent='実働時間は時間・分・秒で手動調整できます。';editSession.dates=[$('edit-start').value,$('edit-end').value].join('|');editSession.initialForm=editSignature();$('edit-dialog').scrollTop=0;$('edit-dialog').showModal();
 }
 
 load();
@@ -238,7 +246,9 @@ $('exercise-finish').onclick=()=>{
 $('result-close').onclick=()=>{if(!pendingResult())return;const next=copy();next.pendingResultId=null;if(save(next)){render();$('start').focus();message('次の作業を始められます。');}};
 $('month').onchange=()=>{if($('month').value){$('selected-day').value=$('month').value+'-01';render();}};
 $('selected-day').onchange=()=>{if($('selected-day').value){$('month').value=$('selected-day').value.slice(0,7);render();}};
-$('edit-cancel').onclick=()=>$('edit-dialog').close();
+$('edit-cancel').onclick=requestCloseEdit;
+$('edit-close').onclick=requestCloseEdit;
+$('edit-dialog').oncancel=event=>{event.preventDefault();requestCloseEdit();};
 for(const id of ['edit-start','edit-end']) $(id).oninput=updateEditTimes;
 for(const id of ['edit-hours','edit-minutes','edit-seconds']) $(id).oninput=()=>{if(editSession)editSession.workTouched=true;};
 $('edit-form').onsubmit=e=>{
