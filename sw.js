@@ -1,11 +1,11 @@
 'use strict';
 // アプリのコードを変更したリリースでは、この番号を更新する。
 const CACHE_PREFIX = 'worktimer-shell-' + encodeURIComponent(self.registration.scope) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v11';
+const CACHE_NAME = CACHE_PREFIX + 'v12';
 const ASSETS = [
   './index.html', './style.css', './categories.js', './core.js', './app.js',
-  './pwa.js', './manifest.webmanifest', './assets/bear-bird-timer-v3.png', './icons/hitoiki-icon-192.png',
-  './icons/hitoiki-icon-512.png', './icons/hitoiki-icon-180.png'
+  './pwa.js', './manifest.webmanifest', './assets/bear-bird-timer-v3.png', './icons/hitoiki-icon-v2-192.png',
+  './icons/hitoiki-icon-v2-512.png', './icons/hitoiki-icon-v2-180.png'
 ];
 const assetURLs = ASSETS.map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
