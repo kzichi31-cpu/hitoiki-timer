@@ -20,7 +20,7 @@
     { id: 'その他の学習', group: '学習' },
     { id: 'その他', group: 'その他' }
   ];
-  const defaults = () => definitions.map((d, order) => ({ id:d.id, label:d.label || d.id, group:d.group, hidden:false, order }));
+  const defaults = () => definitions.map((d, order) => ({ id:d.id, label:d.label || d.id, group:d.group, hidden:false, includeToday:true, order }));
   const legacyFind = category => definitions.find(d => d.id === category || d.aliases?.includes(category));
   const find = (category, settings) => {
     const id = legacyFind(category)?.id || category;

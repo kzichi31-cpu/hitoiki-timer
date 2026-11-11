@@ -15,6 +15,7 @@ const timestamp = ms => new Date(ms).toLocaleString('ja-JP', { month:'numeric', 
 const settings = () => state.categorySettings || W.defaultSettings();
 const categoryLabel = id => W.categoryLabel(id, settings());
 const groupOf = id => W.groupOf(id, settings());
+const includedToday = id => settings().find(c=>c.id===W.categoryId(id))?.includeToday !== false;
 function message(text, error = false) { $('message').hidden = false; $('message').textContent = text; $('message').classList.toggle('error', error); }
 function load() {
   try {
@@ -83,6 +84,7 @@ function renderSummary() {
   $('today-total').textContent = hours(sum(+today,+tomorrow));
   $('week-total').textContent = hours(sum(+week,Date.now()));
   $('month-total').textContent = hours(sum(+month,Date.now()));
+  $('today-focus-total').textContent = hours(allRecords().filter(r=>includedToday(r.category)).reduce((n,r)=>n+W.workIn(r,+today,+tomorrow),0));
 }
 function renderCalendar() {
   const [y,m] = $('month').value.split('-').map(Number);
@@ -243,13 +245,13 @@ function syncCategoryOptions() {
 }
 syncCategoryOptions();
 $('month').value=dateKey(new Date()).slice(0,7);$('selected-day').value=dateKey(new Date());
-if(state.active){$('category').value=W.categoryId(state.active.category);$('memo').value=state.active.memo;}
+if(state.active){$('category').value=W.categoryId(state.active.category);$('memo').value=state.active.memo;if(state.active.memo)$('memo-details').open=true;}
 $('start').onclick=()=>{if(state.active || pendingResult())return;const next=copy(),category=$('category').value;next.active={id:W.uid(),category,group:groupOf(category),memo:$('memo').value,start:Date.now(),end:null,breaks:[]};if(save(next)){render();message('作業を開始しました。');}};
 $('pause').onclick=()=>{if(state.exercise || !state.active || state.active.breaks.at(-1)?.end===null)return;const next=copy();next.active.breaks.push({start:Date.now(),end:null});if(save(next))render();};
 $('resume').onclick=()=>{if(state.exercise || state.active?.breaks.at(-1)?.end!==null)return;const next=copy();next.active.breaks.at(-1).end=Date.now();if(save(next))render();};
 $('memo').oninput=()=>{if(state.exercise || !state.active)return;const next=copy();next.active.memo=$('memo').value;save(next);};
-$('stop').onclick=()=>{if(state.exercise || !state.active)return;const next=copy();const a=next.active;a.end=Date.now();a.memo=$('memo').value;if(a.breaks.at(-1)?.end===null)a.breaks.at(-1).end=a.end;next.records.push(a);next.active=null;next.pendingResultId=a.id;if(save(next)){$('memo').value='';$('selected-day').value=dateKey(new Date(a.start));$('month').value=$('selected-day').value.slice(0,7);render();$('result-title').focus();message('作業を終了し、記録を保存しました。');}};
-$('discard').onclick=()=>{if(!state.active || state.exercise)return;if(!confirm('現在の計測を保存せずに削除しますか？\nこの操作は元に戻せません。'))return;const next=copy();next.active=null;if(save(next)){$('memo').value='';render();message('現在の計測を削除しました。');}};
+$('stop').onclick=()=>{if(state.exercise || !state.active)return;const next=copy();const a=next.active;a.end=Date.now();a.memo=$('memo').value;if(a.breaks.at(-1)?.end===null)a.breaks.at(-1).end=a.end;next.records.push(a);next.active=null;next.pendingResultId=a.id;if(save(next)){$('memo').value='';$('memo-details').open=false;$('selected-day').value=dateKey(new Date(a.start));$('month').value=$('selected-day').value.slice(0,7);render();$('result-title').focus();message('作業を終了し、記録を保存しました。');}};
+$('discard').onclick=()=>{if(!state.active || state.exercise)return;if(!confirm('現在の計測を保存せずに削除しますか？\nこの操作は元に戻せません。'))return;const next=copy();next.active=null;if(save(next)){$('memo').value='';$('memo-details').open=false;render();message('現在の計測を削除しました。');}};
 $('modify').onclick=openActiveEdit;
 $('exercise-finish').onclick=()=>{
   if(locked || !state.exercise)return;
@@ -294,7 +296,7 @@ $('edit-form').onsubmit=e=>{
       if(next.active?.id!==r.id)throw new Error('計測状態が変わりました。画面を閉じて再確認してください。');
       next.records.push(r);next.active=null;next.pendingResultId=r.id;
     }
-    if(save(next)){$('edit-dialog').close();editSession=null;if(isActive){$('memo').value='';$('selected-day').value=dateKey(new Date(r.start));$('month').value=$('selected-day').value.slice(0,7);}render();if(isActive)$('result-title').focus();message(isActive?'修正した記録を保存しました。':'記録の変更を保存しました。');}
+    if(save(next)){$('edit-dialog').close();editSession=null;if(isActive){$('memo').value='';$('memo-details').open=false;$('selected-day').value=dateKey(new Date(r.start));$('month').value=$('selected-day').value.slice(0,7);}render();if(isActive)$('result-title').focus();message(isActive?'修正した記録を保存しました。':'記録の変更を保存しました。');}
   }catch(error){$('edit-error').textContent=error.message;}
 };
 
@@ -330,11 +332,11 @@ function moveCategory(id,direction){
 let categoryEditInitial='';
 function openCategoryEdit(id=null){
   const c=id?settings().find(c=>c.id===id):null;
-  $('category-edit-title').textContent=c?'カテゴリを編集':'カテゴリを追加';$('category-edit-id').value=c?.id||'';$('category-edit-label').value=c?.label||'';$('category-edit-group').value=c?.group||'その他';$('category-edit-hidden').checked=c?.hidden||false;$('category-edit-error').textContent='';
-  categoryEditInitial=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-hidden').checked]);$('category-edit-dialog').showModal();
+  $('category-edit-title').textContent=c?'カテゴリを編集':'カテゴリを追加';$('category-edit-id').value=c?.id||'';$('category-edit-label').value=c?.label||'';$('category-edit-group').value=c?.group||'その他';$('category-edit-today').checked=c?.includeToday!==false;$('category-edit-hidden').checked=c?.hidden||false;$('category-edit-error').textContent='';
+  categoryEditInitial=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-today').checked,$('category-edit-hidden').checked]);$('category-edit-dialog').showModal();
 }
 function closeCategoryEdit(){
-  const current=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-hidden').checked]);
+  const current=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-today').checked,$('category-edit-hidden').checked]);
   if(current!==categoryEditInitial && !confirm('未保存の変更があります。変更を破棄して閉じますか？'))return;
   $('category-edit-dialog').close();
 }
@@ -350,8 +352,8 @@ $('category-edit-form').onsubmit=e=>{
     const next=categoryStateCopy(), id=$('category-edit-id').value, label=$('category-edit-label').value.trim();
     if(!label)throw new Error('カテゴリ名を入力してください。');
     if(next.categorySettings.some(c=>c.label===label && c.id!==id))throw new Error('同じカテゴリ名がすでにあります。');
-    if(id){const c=next.categorySettings.find(c=>c.id===id);if(!c)throw new Error('カテゴリが見つかりません。');c.label=label;c.group=$('category-edit-group').value;c.hidden=$('category-edit-hidden').checked;}
-    else next.categorySettings.push({id:'custom-'+W.uid(),label,group:$('category-edit-group').value,hidden:$('category-edit-hidden').checked,order:next.categorySettings.length});
+    if(id){const c=next.categorySettings.find(c=>c.id===id);if(!c)throw new Error('カテゴリが見つかりません。');c.label=label;c.group=$('category-edit-group').value;c.includeToday=$('category-edit-today').checked;c.hidden=$('category-edit-hidden').checked;}
+    else next.categorySettings.push({id:'custom-'+W.uid(),label,group:$('category-edit-group').value,includeToday:$('category-edit-today').checked,hidden:$('category-edit-hidden').checked,order:next.categorySettings.length});
     if(save(next)){$('category-edit-dialog').close();syncCategoryOptions();renderCategoryManager();render();message('カテゴリ設定を保存しました。');}
   }catch(error){$('category-edit-error').textContent=error.message;}
 };
@@ -366,7 +368,7 @@ $('import').onchange=async e=>{
     if(file.size>20*1024*1024)throw new Error('ファイルが大きすぎます（上限20MB）。');
     const incoming=W.validateState(JSON.parse(await file.text()));const result=W.merge(state,incoming);
     if(!confirm(`${result.added}件の記録を追加します。\n競合：${result.conflicts}件（現在の記録を優先して保持します）。\n計測中の情報は、現在計測がない場合のみ引き継ぎます。\n元のバックアップファイルは保管してください。復元しますか？`))return;
-    if(save(result.state)){syncCategoryOptions();if(state.active){$('category').value=W.categoryId(state.active.category);$('memo').value=state.active.memo;}render();message(`${result.added}件の記録を復元しました。競合${result.conflicts}件は現在の記録を保持しました。`);}
+    if(save(result.state)){syncCategoryOptions();if(state.active){$('category').value=W.categoryId(state.active.category);$('memo').value=state.active.memo;if(state.active.memo)$('memo-details').open=true;}render();message(`${result.added}件の記録を復元しました。競合${result.conflicts}件は現在の記録を保持しました。`);}
   }catch(error){message('復元できませんでした。既存の記録は変更していません。\n'+error.message,true);}finally{e.target.value='';}
 };
 window.addEventListener('storage',e=>{if(e.key===KEY){locked=true;render();message('別の画面でデータが変更されました。上書きを防ぐため操作を停止しました。この画面を再読み込みしてください。',true);}});

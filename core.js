@@ -49,7 +49,7 @@
     if (!Array.isArray(settings)) throw new Error('カテゴリ設定が正しくありません。');
     const ids=new Set(), labels=new Set();
     settings.forEach(c=>{
-      if(!c || typeof c.id!=='string' || !c.id.trim() || ids.has(c.id) || typeof c.label!=='string' || !c.label.trim() || labels.has(c.label.trim()) || !groups.includes(c.group) || typeof c.hidden!=='boolean' || !Number.isSafeInteger(c.order) || c.order<0) throw new Error('カテゴリ設定が正しくありません。');
+      if(!c || typeof c.id!=='string' || !c.id.trim() || ids.has(c.id) || typeof c.label!=='string' || !c.label.trim() || labels.has(c.label.trim()) || !groups.includes(c.group) || typeof c.hidden!=='boolean' || (c.includeToday != null && typeof c.includeToday!=='boolean') || !Number.isSafeInteger(c.order) || c.order<0) throw new Error('カテゴリ設定が正しくありません。');
       ids.add(c.id);labels.add(c.label.trim());
     });
   }
