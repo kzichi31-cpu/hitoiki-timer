@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const classification = typeof module !== 'undefined' ? require('./categories.js') : root.WorkTimerCategories;
-  const { categories, groups, groupOf, categoryLabel, categoryId } = classification;
+  const { categories, groups, groupOf, categoryLabel, categoryId, defaultSettings } = classification;
   const overlap = (a, b, c, d) => Math.max(0, Math.min(b, d) - Math.max(a, c));
   const uid = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   function duration(r, now = Date.now()) {
@@ -41,10 +41,21 @@
       last = p.end ?? Infinity;
     });
     if (r.manualBreakMs != null && (!Number.isFinite(r.manualBreakMs) || r.manualBreakMs < 0 || active || r.manualBreakMs > r.end - r.start || r.breaks.length)) throw new Error('休憩時間は拘束時間以内で入力してください。');
+    if (r.group != null && !groups.includes(r.group)) throw new Error('活動グループが正しくありません。');
     return r;
+  }
+  function validateCategorySettings(settings) {
+    if (settings == null) return;
+    if (!Array.isArray(settings)) throw new Error('カテゴリ設定が正しくありません。');
+    const ids=new Set(), labels=new Set();
+    settings.forEach(c=>{
+      if(!c || typeof c.id!=='string' || !c.id.trim() || ids.has(c.id) || typeof c.label!=='string' || !c.label.trim() || labels.has(c.label.trim()) || !groups.includes(c.group) || typeof c.hidden!=='boolean' || !Number.isSafeInteger(c.order) || c.order<0) throw new Error('カテゴリ設定が正しくありません。');
+      ids.add(c.id);labels.add(c.label.trim());
+    });
   }
   function validateState(s) {
     if (!s || s.version !== 1 || !Array.isArray(s.records)) throw new Error('対応するバックアップ形式ではありません。');
+    validateCategorySettings(s.categorySettings);
     const ids = new Set();
     s.records.forEach(r => { validateRecord(r); if (ids.has(r.id)) throw new Error('記録IDが重複しています。'); ids.add(r.id); });
     if (s.active !== null) { validateRecord(s.active, true); if (ids.has(s.active.id)) throw new Error('計測中のIDが重複しています。'); }
@@ -58,7 +69,7 @@
   }
   function groupTotals(records, from, to, now = Date.now()) {
     const totals = Object.fromEntries(groups.map(group => [group, 0]));
-    records.forEach(r => { totals[groupOf(r.category)] += workIn(r, from, to, now); });
+    records.forEach(r => { totals[r.group || groupOf(r.category)] += workIn(r, from, to, now); });
     return totals;
   }
   function merge(current, incoming) {
@@ -77,9 +88,10 @@
       }
       else if (JSON.stringify(result.active) !== JSON.stringify(incoming.active) || JSON.stringify(result.exercise ?? null) !== JSON.stringify(incoming.exercise ?? null)) conflicts++;
     }
+    if (!result.categorySettings && incoming.categorySettings) result.categorySettings = incoming.categorySettings;
     return { state: result, added, conflicts };
   }
-  const api = { categories, groups, groupOf, categoryLabel, categoryId, groupTotals, uid, duration, workIn, editTiming, validateState, validateRecord, merge };
+  const api = { categories, groups, groupOf, categoryLabel, categoryId, defaultSettings, groupTotals, uid, duration, workIn, editTiming, validateState, validateRecord, validateCategorySettings, merge };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WorkTimer = api;
 })(globalThis);

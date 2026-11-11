@@ -1,6 +1,4 @@
-/* 分類を変更するときは、この一覧を編集します。
-   idは保存済みカテゴリ名なので維持し、表示名だけ変える場合はlabelを変更します。
-   同じ活動の旧名称はaliasesに追加します。未知のカテゴリは「その他」に集計します。 */
+/* カテゴリの初期設定。idは記録との結び付けに使うため変更しません。 */
 (function (root) {
   'use strict';
   const groups = ['副業・事業育成', '仕事・現在の収入', '生活・家事', '健康・運動', '学習', 'その他'];
@@ -22,13 +20,18 @@
     { id: 'その他の学習', group: '学習' },
     { id: 'その他', group: 'その他' }
   ];
-  const find = category => definitions.find(d => d.id === category || d.aliases?.includes(category));
+  const defaults = () => definitions.map((d, order) => ({ id:d.id, label:d.label || d.id, group:d.group, hidden:false, order }));
+  const legacyFind = category => definitions.find(d => d.id === category || d.aliases?.includes(category));
+  const find = (category, settings) => {
+    const id = legacyFind(category)?.id || category;
+    return (Array.isArray(settings) ? settings : defaults()).find(d => d.id === id) || legacyFind(category);
+  };
   const api = {
-    groups, definitions,
+    groups, definitions, defaultSettings: defaults,
     categories: definitions.map(d => d.id),
-    groupOf: category => find(category)?.group || 'その他',
-    categoryLabel: category => find(category)?.label || category,
-    categoryId: category => find(category)?.id || category
+    groupOf: (category, settings) => find(category, settings)?.group || 'その他',
+    categoryLabel: (category, settings) => find(category, settings)?.label || category,
+    categoryId: category => legacyFind(category)?.id || category
   };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WorkTimerCategories = api;

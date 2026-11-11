@@ -12,6 +12,9 @@ const localInput = ms => { const d = new Date(ms); return `${dateKey(d)}T${pad(d
 const clock = ms => { const s = Math.floor(ms / 1000); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; };
 const hours = ms => { const m = Math.floor(ms / 60000); return `${Math.floor(m / 60)}時間${pad(m % 60)}分`; };
 const timestamp = ms => new Date(ms).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+const settings = () => state.categorySettings || W.defaultSettings();
+const categoryLabel = id => W.categoryLabel(id, settings());
+const groupOf = id => W.groupOf(id, settings());
 function message(text, error = false) { $('message').hidden = false; $('message').textContent = text; $('message').classList.toggle('error', error); }
 function load() {
   try {
@@ -45,7 +48,7 @@ function renderResult() {
   $('timer-card').hidden = !!r;
   if (!r) return;
   const d = W.duration(r);
-  $('result-category').textContent = W.categoryLabel(r.category);
+  $('result-category').textContent = categoryLabel(r.category);
   $('result-start').textContent = new Date(r.start).toLocaleString('ja-JP');
   $('result-end').textContent = new Date(r.end).toLocaleString('ja-JP');
   $('result-work').textContent = clock(d.work);
@@ -61,12 +64,13 @@ function renderTimer() {
   $('timer-clocks').classList.toggle('is-working', !!a && !paused);
   const d = a ? W.duration(a) : { work: 0, rest: 0 };
   $('elapsed').textContent = clock(d.work);
-  $('timer-details').textContent = a ? (exercise ? `${timestamp(a.start)} 運動開始 ／ 元の作業「${W.categoryLabel(state.active.category)}」は一時停止中（実働 ${clock(W.duration(state.active).work)}）` : `${timestamp(a.start)} 開始`) : 'カテゴリを選んで、はじめましょう。';
-  $('start').hidden = !!a; $('pause').hidden = !a || paused || !!exercise; $('resume').hidden = !paused || !!exercise; $('stop').hidden = !a || !!exercise;
-  $('exercise-start').hidden = !state.active || !!exercise;
+  $('timer-details').textContent = a ? (exercise ? `${timestamp(a.start)} 運動開始 ／ 元の作業「${categoryLabel(state.active.category)}」は一時停止中（実働 ${clock(W.duration(state.active).work)}）` : `${timestamp(a.start)} 開始`) : 'カテゴリを選んで、はじめましょう。';
+  $('start').hidden = !!a; $('run-actions').hidden = !a || !!exercise; $('finish-actions').hidden = !a || !!exercise; $('modify').hidden = !a || !!exercise;
+  $('pause').disabled = locked || !a || paused || !!exercise;
+  $('resume').disabled = locked || !a || !paused || !!exercise;
   $('exercise-finish').hidden = !exercise;
   $('category').disabled = !!a || locked;
-  for (const id of ['start','pause','resume','stop','memo','import-button','exercise-start','exercise-finish']) $(id).disabled = locked;
+  for (const id of ['start','stop','discard','modify','memo','import-button','exercise-finish','manage-categories']) $(id).disabled = locked;
   $('timer-form').hidden = !!exercise;
   $('memo').disabled = locked || !!exercise;
   $('import-button').disabled = locked || !!pendingResult();
@@ -101,14 +105,14 @@ function renderCalendar() {
     calendar.append(button);
   }
   $('category-period').textContent=`${y}年${m}月の実働時間（計測中も含む）`;
-  const categoryIds = [...new Set([...W.categories, ...allRecords().map(r => W.categoryId(r.category))])];
+  const categoryIds = [...new Set([[...settings()].sort((a,b)=>a.order-b.order).map(c=>c.id), ...allRecords().map(r => W.categoryId(r.category))].flat())];
   const totals=categoryIds.map(category=>({category,value:sum(+start,+end,category)})).sort((a,b)=>b.value-a.value);
   const max=totals[0].value;
   $('category-totals').replaceChildren();
   totals.forEach(t=>{
     const row=document.createElement('div'); row.className='category-row';
     const line=document.createElement('div'); line.className='category-line';
-    const label=document.createElement('span');label.textContent=W.categoryLabel(t.category);
+    const label=document.createElement('span');label.textContent=categoryLabel(t.category);
     const value=document.createElement('span');value.textContent=hours(t.value);
     const bar=document.createElement('div');bar.className='bar';const fill=document.createElement('i');fill.style.width=`${max?t.value/max*100:0}%`;
     line.append(label,value);bar.append(fill);row.append(line,bar);$('category-totals').append(row);
@@ -143,7 +147,7 @@ function renderRecords() {
   records.forEach(r=>{
     const d=W.duration(r);const article=document.createElement('article');article.className='record';
     const head=document.createElement('div');head.className='record-head';
-    const title=document.createElement('h3');title.textContent=W.categoryLabel(r.category)+(r.end===null?' ・計測中':'');
+    const title=document.createElement('h3');title.textContent=categoryLabel(r.category)+(r.end===null?' ・計測中':'');
     const work=document.createElement('strong');work.textContent='当日の実働 '+clock(W.workIn(r,from,to));head.append(title,work);
     const times=document.createElement('p');times.className='muted';times.textContent=`開始 ${timestamp(r.start)} ／ 終了 ${r.end===null?'計測中':timestamp(r.end)}`;
     const detail=document.createElement('p');detail.className='muted';detail.textContent=`記録全体の実働時間：${clock(d.work)}`;
@@ -177,7 +181,7 @@ function readWork() {
 }
 function updateEditTimes() {
   if(!editSession)return;
-  const r=state.records.find(r=>r.id===editSession.id);if(!r)return;
+  const r=editSession.draft || state.records.find(r=>r.id===editSession.id);if(!r)return;
   $('edit-confirm').checked=false;
   editSession.dates=[$('edit-start').value,$('edit-end').value].join('|');
   try {
@@ -196,43 +200,57 @@ function editSignature() {
 }
 function requestCloseEdit() {
   if(editSession && editSignature()!==editSession.initialForm && !confirm('未保存の変更があります。変更を破棄して閉じますか？'))return;
+  if(editSession?.source==='active' && editSession.wasRunning){
+    const next=copy();
+    if(next.active?.id===editSession.id && next.active.breaks.at(-1)?.end===null)next.active.breaks.at(-1).end=Date.now();
+    if(!save(next))return;
+  }
   $('edit-dialog').close();editSession=null;
+  render();
 }
-function openEdit(r) {
-  editSession={id:r.id,workTouched:false};
+function fillEdit(r, source='saved', wasRunning=false) {
+  editSession={id:r.id,workTouched:false,source,wasRunning,draft:source==='active'?r:null};
+  $('edit-title').textContent=source==='active'?'保存前に修正':'記録を編集';$('edit-submit').textContent=source==='active'?'修正して保存':'変更を保存';
   $('edit-id').value=r.id;$('edit-category').value=W.categoryId(r.category);$('edit-start').value=localInput(r.start);$('edit-end').value=localInput(r.end);putWork(W.duration(r).work);$('edit-memo').value=r.memo;$('edit-error').textContent='';$('edit-confirm').checked=false;$('edit-confirm-label').hidden=true;$('edit-calculation').textContent='実働時間は時間・分・秒で手動調整できます。';editSession.dates=[$('edit-start').value,$('edit-end').value].join('|');editSession.initialForm=editSignature();$('edit-dialog').scrollTop=0;$('edit-dialog').showModal();
+}
+function openEdit(r) { fillEdit(r); }
+function openActiveEdit(){
+  if(!state.active || state.exercise)return;
+  const next=copy(), now=Date.now(), wasRunning=next.active.breaks.at(-1)?.end!==null;
+  if(wasRunning)next.active.breaks.push({start:now,end:null});
+  next.active.memo=$('memo').value;
+  if(!save(next))return;
+  const draft=JSON.parse(JSON.stringify(state.active));draft.end=now;
+  if(draft.breaks.at(-1)?.end===null)draft.breaks.at(-1).end=now;
+  fillEdit(draft,'active',wasRunning);
+  render();
 }
 
 load();
-const availableCategories = new Set();
 function syncCategoryOptions() {
-  const categoryIds = [...W.categories,...allRecords().map(r=>W.categoryId(r.category))];
-  categoryIds.forEach(c => {
-    if (availableCategories.has(c)) return;
-    for (const id of ['category','edit-category']) {
-      const o=document.createElement('option');o.value=c;o.textContent=W.categoryLabel(c);$(id).append(o);
+  const previous=$('category').value;
+  for(const target of ['category','edit-category'])$(target).replaceChildren();
+  const configured=[...settings()].sort((a,b)=>a.order-b.order);
+  const known=new Set(configured.map(c=>c.id));
+  const unknown=allRecords().map(r=>W.categoryId(r.category)).filter(id=>!known.has(id)).map((id,order)=>({id,label:id,hidden:true,order:configured.length+order}));
+  for(const c of [...configured,...unknown]){
+    for(const id of ['category','edit-category']){
+      if(id==='category' && c.hidden)continue;
+      const o=document.createElement('option');o.value=c.id;o.textContent=c.label;$(id).append(o);
     }
-    availableCategories.add(c);
-  });
+  }
+  if([...configured,...unknown].some(c=>c.id===previous && !c.hidden))$('category').value=previous;
 }
 syncCategoryOptions();
 $('month').value=dateKey(new Date()).slice(0,7);$('selected-day').value=dateKey(new Date());
 if(state.active){$('category').value=W.categoryId(state.active.category);$('memo').value=state.active.memo;}
-$('start').onclick=()=>{if(state.active || pendingResult())return;const next=copy();next.active={id:W.uid(),category:$('category').value,memo:$('memo').value,start:Date.now(),end:null,breaks:[]};if(save(next)){render();message('作業を開始しました。');}};
+$('start').onclick=()=>{if(state.active || pendingResult())return;const next=copy(),category=$('category').value;next.active={id:W.uid(),category,group:groupOf(category),memo:$('memo').value,start:Date.now(),end:null,breaks:[]};if(save(next)){render();message('作業を開始しました。');}};
 $('pause').onclick=()=>{if(state.exercise || !state.active || state.active.breaks.at(-1)?.end===null)return;const next=copy();next.active.breaks.push({start:Date.now(),end:null});if(save(next))render();};
 $('resume').onclick=()=>{if(state.exercise || state.active?.breaks.at(-1)?.end!==null)return;const next=copy();next.active.breaks.at(-1).end=Date.now();if(save(next))render();};
 $('memo').oninput=()=>{if(state.exercise || !state.active)return;const next=copy();next.active.memo=$('memo').value;save(next);};
 $('stop').onclick=()=>{if(state.exercise || !state.active)return;const next=copy();const a=next.active;a.end=Date.now();a.memo=$('memo').value;if(a.breaks.at(-1)?.end===null)a.breaks.at(-1).end=a.end;next.records.push(a);next.active=null;next.pendingResultId=a.id;if(save(next)){$('memo').value='';$('selected-day').value=dateKey(new Date(a.start));$('month').value=$('selected-day').value.slice(0,7);render();$('result-title').focus();message('作業を終了し、記録を保存しました。');}};
-// 元の作業の停止と運動の開始を、同じ保存処理で確定する。
-$('exercise-start').onclick=()=>{
-  if(locked || !state.active || state.exercise || pendingResult())return;
-  const next=copy(), now=Date.now();
-  const resumeParent=next.active.breaks.at(-1)?.end!==null;
-  if(resumeParent)next.active.breaks.push({start:now,end:null});
-  next.active.memo=$('memo').value;
-  next.exercise={resumeParent,record:{id:W.uid(),category:'ストレッチ',memo:'',start:now,end:null,breaks:[]}};
-  if(save(next)){render();message('運動を開始しました。元の作業は一時停止しています。');}
-};
+$('discard').onclick=()=>{if(!state.active || state.exercise)return;if(!confirm('現在の計測を保存せずに削除しますか？\nこの操作は元に戻せません。'))return;const next=copy();next.active=null;if(save(next)){$('memo').value='';render();message('現在の計測を削除しました。');}};
+$('modify').onclick=openActiveEdit;
 $('exercise-finish').onclick=()=>{
   if(locked || !state.exercise)return;
   const next=copy(), now=Date.now(), exercise=next.exercise;
@@ -252,7 +270,8 @@ $('edit-dialog').oncancel=event=>{event.preventDefault();requestCloseEdit();};
 for(const id of ['edit-start','edit-end']) $(id).oninput=updateEditTimes;
 for(const id of ['edit-hours','edit-minutes','edit-seconds']) $(id).oninput=()=>{if(editSession)editSession.workTouched=true;};
 $('edit-form').onsubmit=e=>{
-  e.preventDefault();const next=copy();const r=next.records.find(x=>x.id===$('edit-id').value);if(!r || !editSession)return;
+  e.preventDefault();if(!editSession)return;const next=copy();const isActive=editSession.source==='active';
+  const r=isActive ? JSON.parse(JSON.stringify(editSession.draft)) : next.records.find(x=>x.id===$('edit-id').value);if(!r)return;
   try{
     if(editSession.dates!==[$('edit-start').value,$('edit-end').value].join('|'))updateEditTimes();
     const start=localInput(r.start)===$('edit-start').value?r.start:+new Date($('edit-start').value);
@@ -268,9 +287,73 @@ $('edit-form').onsubmit=e=>{
       if(!timing.needsManual && Math.abs(timing.work-work)<0.1){r.breaks=timing.breaks;if(timing.manualBreakMs!=null)r.manualBreakMs=timing.manualBreakMs;else delete r.manualBreakMs;}
       else {r.breaks=[];r.manualBreakMs=end-start-work;}
     }
-    r.category=$('edit-category').value;r.memo=$('edit-memo').value;W.validateRecord(r);
-    if(save(next)){$('edit-dialog').close();editSession=null;render();message('記録の変更を保存しました。');}
+    const oldCategory=W.categoryId(r.category);r.category=$('edit-category').value;r.memo=$('edit-memo').value;
+    if(isActive || oldCategory!==r.category)r.group=groupOf(r.category);
+    W.validateRecord(r);
+    if(isActive){
+      if(next.active?.id!==r.id)throw new Error('計測状態が変わりました。画面を閉じて再確認してください。');
+      next.records.push(r);next.active=null;next.pendingResultId=r.id;
+    }
+    if(save(next)){$('edit-dialog').close();editSession=null;if(isActive){$('memo').value='';$('selected-day').value=dateKey(new Date(r.start));$('month').value=$('selected-day').value.slice(0,7);}render();if(isActive)$('result-title').focus();message(isActive?'修正した記録を保存しました。':'記録の変更を保存しました。');}
   }catch(error){$('edit-error').textContent=error.message;}
+};
+
+function categoryStateCopy(){
+  const next=copy();
+  if(!next.categorySettings)next.categorySettings=W.defaultSettings();
+  // 設定変更前の分類を保存し、過去のグループ集計を固定する。
+  next.records.forEach(r=>{if(!r.group)r.group=W.groupOf(r.category);});
+  if(next.active && !next.active.group)next.active.group=W.groupOf(next.active.category);
+  if(next.exercise?.record && !next.exercise.record.group)next.exercise.record.group=W.groupOf(next.exercise.record.category);
+  return next;
+}
+function renderCategoryManager(){
+  const target=$('category-list');target.replaceChildren();
+  [...settings()].sort((a,b)=>a.order-b.order).forEach((c,index,list)=>{
+    const row=document.createElement('div');row.className='manage-row';
+    const info=document.createElement('div');const name=document.createElement('strong');name.textContent=c.label+(c.hidden?'（非表示）':'');
+    const group=document.createElement('span');group.textContent=c.group;info.append(name,group);
+    const actions=document.createElement('div');actions.className='manage-actions';
+    const up=document.createElement('button');up.type='button';up.className='soft';up.textContent='上へ';up.disabled=index===0;
+    const down=document.createElement('button');down.type='button';down.className='soft';down.textContent='下へ';down.disabled=index===list.length-1;
+    const edit=document.createElement('button');edit.type='button';edit.className='outline';edit.textContent='編集';
+    up.onclick=()=>moveCategory(c.id,-1);down.onclick=()=>moveCategory(c.id,1);edit.onclick=()=>openCategoryEdit(c.id);
+    actions.append(up,down,edit);row.append(info,actions);target.append(row);
+  });
+}
+function moveCategory(id,direction){
+  const next=categoryStateCopy(), list=[...next.categorySettings].sort((a,b)=>a.order-b.order), index=list.findIndex(c=>c.id===id), other=index+direction;
+  if(index<0 || other<0 || other>=list.length)return;
+  [list[index],list[other]]=[list[other],list[index]];list.forEach((c,i)=>c.order=i);next.categorySettings=list;
+  if(save(next)){syncCategoryOptions();renderCategoryManager();render();}
+}
+let categoryEditInitial='';
+function openCategoryEdit(id=null){
+  const c=id?settings().find(c=>c.id===id):null;
+  $('category-edit-title').textContent=c?'カテゴリを編集':'カテゴリを追加';$('category-edit-id').value=c?.id||'';$('category-edit-label').value=c?.label||'';$('category-edit-group').value=c?.group||'その他';$('category-edit-hidden').checked=c?.hidden||false;$('category-edit-error').textContent='';
+  categoryEditInitial=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-hidden').checked]);$('category-edit-dialog').showModal();
+}
+function closeCategoryEdit(){
+  const current=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-hidden').checked]);
+  if(current!==categoryEditInitial && !confirm('未保存の変更があります。変更を破棄して閉じますか？'))return;
+  $('category-edit-dialog').close();
+}
+$('manage-categories').onclick=()=>{renderCategoryManager();$('category-dialog').showModal();};
+$('category-close').onclick=()=>$('category-dialog').close();
+$('category-dialog').oncancel=e=>{e.preventDefault();$('category-dialog').close();};
+$('category-add').onclick=()=>openCategoryEdit();
+$('category-edit-close').onclick=closeCategoryEdit;$('category-edit-cancel').onclick=closeCategoryEdit;
+$('category-edit-dialog').oncancel=e=>{e.preventDefault();closeCategoryEdit();};
+W.groups.forEach(group=>{const option=document.createElement('option');option.value=group;option.textContent=group;$('category-edit-group').append(option);});
+$('category-edit-form').onsubmit=e=>{
+  e.preventDefault();try{
+    const next=categoryStateCopy(), id=$('category-edit-id').value, label=$('category-edit-label').value.trim();
+    if(!label)throw new Error('カテゴリ名を入力してください。');
+    if(next.categorySettings.some(c=>c.label===label && c.id!==id))throw new Error('同じカテゴリ名がすでにあります。');
+    if(id){const c=next.categorySettings.find(c=>c.id===id);if(!c)throw new Error('カテゴリが見つかりません。');c.label=label;c.group=$('category-edit-group').value;c.hidden=$('category-edit-hidden').checked;}
+    else next.categorySettings.push({id:'custom-'+W.uid(),label,group:$('category-edit-group').value,hidden:$('category-edit-hidden').checked,order:next.categorySettings.length});
+    if(save(next)){$('category-edit-dialog').close();syncCategoryOptions();renderCategoryManager();render();message('カテゴリ設定を保存しました。');}
+  }catch(error){$('category-edit-error').textContent=error.message;}
 };
 
 function download(text,name){const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
