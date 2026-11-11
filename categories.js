@@ -21,17 +21,19 @@
     { id: 'その他', group: 'その他' }
   ];
   const defaults = () => definitions.map((d, order) => ({ id:d.id, label:d.label || d.id, group:d.group, hidden:false, includeToday:true, order }));
+  const defaultGroups = () => groups.map((id, order) => ({ id, label:id, hidden:false, order }));
   const legacyFind = category => definitions.find(d => d.id === category || d.aliases?.includes(category));
   const find = (category, settings) => {
     const id = legacyFind(category)?.id || category;
     return (Array.isArray(settings) ? settings : defaults()).find(d => d.id === id) || legacyFind(category);
   };
   const api = {
-    groups, definitions, defaultSettings: defaults,
+    groups, definitions, defaultSettings: defaults, defaultGroupSettings: defaultGroups,
     categories: definitions.map(d => d.id),
     groupOf: (category, settings) => find(category, settings)?.group || 'その他',
     categoryLabel: (category, settings) => find(category, settings)?.label || category,
-    categoryId: category => legacyFind(category)?.id || category
+    categoryId: category => legacyFind(category)?.id || category,
+    groupLabel: (group, settings) => (Array.isArray(settings) ? settings : defaultGroups()).find(g=>g.id===group)?.label || group
   };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WorkTimerCategories = api;

@@ -14,8 +14,10 @@ const hours = ms => { const m = Math.floor(ms / 60000); return `${Math.floor(m /
 const timestamp = ms => new Date(ms).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
 const timeOnly = ms => new Date(ms).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
 const settings = () => state.categorySettings || W.defaultSettings();
+const groupSettings = () => state.groupSettings || W.defaultGroupSettings();
 const categoryLabel = id => W.categoryLabel(id, settings());
 const groupOf = id => W.groupOf(id, settings());
+const groupLabel = id => W.groupLabel(id, groupSettings());
 const includedToday = id => settings().find(c=>c.id===W.categoryId(id))?.includeToday !== false;
 function message(text, error = false) { $('message').hidden = false; $('message').textContent = text; $('message').classList.toggle('error', error); }
 function load() {
@@ -72,7 +74,7 @@ function renderTimer() {
   $('resume').disabled = locked || !a || !paused || !!exercise;
   $('exercise-finish').hidden = !exercise;
   $('category').disabled = !!a || locked;
-  for (const id of ['start','stop','discard','modify','memo','import-button','exercise-finish','manage-categories']) $(id).disabled = locked;
+  for (const id of ['start','stop','discard','modify','memo','import-button','exercise-finish','manage-categories','manage-groups']) $(id).disabled = locked;
   $('timer-form').hidden = !!exercise;
   $('memo').disabled = locked || !!exercise;
   $('import-button').disabled = locked || !!pendingResult();
@@ -123,10 +125,10 @@ function renderCalendar() {
 }
 function renderGroupRows(targetId, totals) {
   const target = $(targetId); target.replaceChildren();
-  W.groups.forEach(group => {
+  [...groupSettings()].sort((a,b)=>a.order-b.order).filter(group=>!group.hidden || (totals[group.id]||0)>0).forEach(group => {
     const row = document.createElement('div'); row.className = 'group-stat';
-    const label = document.createElement('span'); label.textContent = group;
-    const value = document.createElement('strong'); value.textContent = clock(totals[group]);
+    const label = document.createElement('span'); label.textContent = group.label;
+    const value = document.createElement('strong'); value.textContent = clock(totals[group.id]||0);
     row.append(label, value); target.append(row);
   });
 }
@@ -134,7 +136,7 @@ function renderMonthGroups() {
   const [y,m] = $('month').value.split('-').map(Number); if(!y || !m) return;
   const from = +new Date(y,m-1,1), to = +new Date(y,m,1);
   const now = Date.now(), records = allRecords();
-  renderGroupRows('month-group-totals', W.groupTotals(records,from,to,now));
+  renderGroupRows('month-group-totals', W.groupTotals(records,from,to,now,settings(),groupSettings()));
   $('group-period').textContent = `${y}年${m}月`;
   $('month-group-total').textContent = '全グループの実働合計：' + clock(records.reduce((n,r)=>n+W.workIn(r,from,to,now),0));
 }
@@ -142,7 +144,7 @@ function renderRecords() {
   const key=$('selected-day').value; if(!key)return;
   const [from,to]=rangeDay(key);
   const now=Date.now(), all=allRecords();
-  renderGroupRows('day-group-totals', W.groupTotals(all,from,to,now));
+  renderGroupRows('day-group-totals', W.groupTotals(all,from,to,now,settings(),groupSettings()));
   $('day-group-total').textContent='全グループの実働合計：'+clock(all.reduce((n,r)=>n+W.workIn(r,from,to,now),0));
   const records=allRecords().filter(r=> W.workIn(r,from,to)>0 || (r.start>=from && r.start<to)).sort((a,b)=>b.start-a.start);
   const target=$('records');target.replaceChildren();
@@ -306,10 +308,11 @@ $('edit-form').onsubmit=e=>{
 function categoryStateCopy(){
   const next=copy();
   if(!next.categorySettings)next.categorySettings=W.defaultSettings();
+  if(!next.groupSettings)next.groupSettings=W.defaultGroupSettings();
   // 設定変更前の分類を保存し、過去のグループ集計を固定する。
-  next.records.forEach(r=>{if(!r.group)r.group=W.groupOf(r.category);});
-  if(next.active && !next.active.group)next.active.group=W.groupOf(next.active.category);
-  if(next.exercise?.record && !next.exercise.record.group)next.exercise.record.group=W.groupOf(next.exercise.record.category);
+  next.records.forEach(r=>{if(!r.group)r.group=W.groupOf(r.category,next.categorySettings);});
+  if(next.active && !next.active.group)next.active.group=W.groupOf(next.active.category,next.categorySettings);
+  if(next.exercise?.record && !next.exercise.record.group)next.exercise.record.group=W.groupOf(next.exercise.record.category,next.categorySettings);
   return next;
 }
 function renderCategoryManager(){
@@ -317,7 +320,7 @@ function renderCategoryManager(){
   [...settings()].sort((a,b)=>a.order-b.order).forEach((c,index,list)=>{
     const row=document.createElement('div');row.className='manage-row';
     const info=document.createElement('div');const name=document.createElement('strong');name.textContent=c.label+(c.hidden?'（非表示）':'');
-    const group=document.createElement('span');group.textContent=c.group;info.append(name,group);
+    const group=document.createElement('span');group.textContent=groupLabel(c.group);info.append(name,group);
     const actions=document.createElement('div');actions.className='manage-actions';
     const up=document.createElement('button');up.type='button';up.className='soft';up.textContent='上へ';up.disabled=index===0;
     const down=document.createElement('button');down.type='button';down.className='soft';down.textContent='下へ';down.disabled=index===list.length-1;
@@ -335,6 +338,7 @@ function moveCategory(id,direction){
 let categoryEditInitial='';
 function openCategoryEdit(id=null){
   const c=id?settings().find(c=>c.id===id):null;
+  syncGroupSelect('category-edit-group',c?.group||'その他');
   $('category-edit-title').textContent=c?'カテゴリを編集':'カテゴリを追加';$('category-edit-id').value=c?.id||'';$('category-edit-label').value=c?.label||'';$('category-edit-group').value=c?.group||'その他';$('category-edit-today').checked=c?.includeToday!==false;$('category-edit-hidden').checked=c?.hidden||false;$('category-edit-error').textContent='';
   categoryEditInitial=JSON.stringify([$('category-edit-label').value,$('category-edit-group').value,$('category-edit-today').checked,$('category-edit-hidden').checked]);$('category-edit-dialog').showModal();
 }
@@ -349,7 +353,6 @@ $('category-dialog').oncancel=e=>{e.preventDefault();$('category-dialog').close(
 $('category-add').onclick=()=>openCategoryEdit();
 $('category-edit-close').onclick=closeCategoryEdit;$('category-edit-cancel').onclick=closeCategoryEdit;
 $('category-edit-dialog').oncancel=e=>{e.preventDefault();closeCategoryEdit();};
-W.groups.forEach(group=>{const option=document.createElement('option');option.value=group;option.textContent=group;$('category-edit-group').append(option);});
 $('category-edit-form').onsubmit=e=>{
   e.preventDefault();try{
     const next=categoryStateCopy(), id=$('category-edit-id').value, label=$('category-edit-label').value.trim();
@@ -359,6 +362,87 @@ $('category-edit-form').onsubmit=e=>{
     else next.categorySettings.push({id:'custom-'+W.uid(),label,group:$('category-edit-group').value,includeToday:$('category-edit-today').checked,hidden:$('category-edit-hidden').checked,order:next.categorySettings.length});
     if(save(next)){$('category-edit-dialog').close();syncCategoryOptions();renderCategoryManager();render();message('カテゴリ設定を保存しました。');}
   }catch(error){$('category-edit-error').textContent=error.message;}
+};
+
+function syncGroupSelect(targetId,current='その他',exclude=null){
+  const target=$(targetId);target.replaceChildren();
+  [...groupSettings()].sort((a,b)=>a.order-b.order).filter(g=>g.id!==exclude && (!g.hidden || g.id===current || targetId==='group-delete-target')).forEach(g=>{
+    const option=document.createElement('option');option.value=g.id;option.textContent=g.label+(g.hidden?'（非表示）':'');target.append(option);
+  });
+  if(groupSettings().some(g=>g.id===current && g.id!==exclude))target.value=current;
+}
+function renderGroupManager(){
+  const target=$('group-list');target.replaceChildren();
+  [...groupSettings()].sort((a,b)=>a.order-b.order).forEach((g,index,list)=>{
+    const row=document.createElement('div');row.className='manage-row'+(g.hidden?' is-hidden':'');
+    const info=document.createElement('div');const name=document.createElement('strong');name.textContent=g.label+(g.hidden?'（非表示）':'');
+    const count=document.createElement('span');count.textContent=`所属カテゴリ ${settings().filter(c=>c.group===g.id).length}件`;info.append(name,count);
+    const actions=document.createElement('div');actions.className='manage-actions';
+    const up=document.createElement('button');up.type='button';up.className='soft';up.textContent='上へ';up.disabled=index===0;
+    const down=document.createElement('button');down.type='button';down.className='soft';down.textContent='下へ';down.disabled=index===list.length-1;
+    const edit=document.createElement('button');edit.type='button';edit.className='outline';edit.textContent='編集';
+    up.onclick=()=>moveGroup(g.id,-1);down.onclick=()=>moveGroup(g.id,1);edit.onclick=()=>openGroupEdit(g.id);
+    actions.append(up,down,edit);row.append(info,actions);target.append(row);
+  });
+}
+function moveGroup(id,direction){
+  const next=categoryStateCopy(),list=[...next.groupSettings].sort((a,b)=>a.order-b.order),index=list.findIndex(g=>g.id===id),other=index+direction;
+  if(index<0 || other<0 || other>=list.length)return;
+  [list[index],list[other]]=[list[other],list[index]];list.forEach((g,i)=>g.order=i);next.groupSettings=list;
+  if(save(next)){renderGroupManager();render();}
+}
+let groupEditInitial='';
+function openGroupEdit(id=null){
+  const g=id?groupSettings().find(g=>g.id===id):null,isOther=id==='その他';
+  $('group-edit-title').textContent=g?'活動グループを編集':'活動グループを追加';$('group-edit-id').value=g?.id||'';$('group-edit-label').value=g?.label||'';$('group-edit-hidden').checked=g?.hidden||false;$('group-edit-hidden').disabled=isOther;$('group-edit-hidden-label').hidden=isOther;$('group-delete').hidden=!g||isOther;$('group-edit-error').textContent='';
+  groupEditInitial=JSON.stringify([$('group-edit-label').value,$('group-edit-hidden').checked]);$('group-edit-dialog').showModal();
+}
+function closeGroupEdit(){
+  const current=JSON.stringify([$('group-edit-label').value,$('group-edit-hidden').checked]);
+  if(current!==groupEditInitial && !confirm('未保存の変更があります。変更を破棄して閉じますか？'))return;
+  $('group-edit-dialog').close();
+}
+$('manage-groups').onclick=()=>{renderGroupManager();$('group-dialog').showModal();};
+$('group-close').onclick=()=>$('group-dialog').close();$('group-dialog').oncancel=e=>{e.preventDefault();$('group-dialog').close();};
+$('group-add').onclick=()=>openGroupEdit();$('group-edit-close').onclick=closeGroupEdit;$('group-edit-cancel').onclick=closeGroupEdit;$('group-edit-dialog').oncancel=e=>{e.preventDefault();closeGroupEdit();};
+$('group-edit-form').onsubmit=e=>{
+  e.preventDefault();try{
+    const next=categoryStateCopy(),id=$('group-edit-id').value,label=$('group-edit-label').value.trim();
+    if(!label)throw new Error('活動グループ名を入力してください。');
+    if(next.groupSettings.some(g=>g.label===label && g.id!==id))throw new Error('同じ活動グループ名がすでにあります。');
+    if(id){const g=next.groupSettings.find(g=>g.id===id);if(!g)throw new Error('活動グループが見つかりません。');g.label=label;g.hidden=id==='その他'?false:$('group-edit-hidden').checked;}
+    else next.groupSettings.push({id:'group-'+W.uid(),label,hidden:$('group-edit-hidden').checked,order:next.groupSettings.length});
+    if(save(next)){$('group-edit-dialog').close();renderGroupManager();renderCategoryManager();render();message('活動グループ設定を保存しました。');}
+  }catch(error){$('group-edit-error').textContent=error.message;}
+};
+let pendingGroupDeleteId=null;
+function groupUsage(next,id){
+  const records=[...next.records,...(next.active?[next.active]:[]),...(next.exercise?[next.exercise.record]:[])];
+  return {categories:next.categorySettings.filter(c=>c.group===id).length,records:records.filter(r=>r.group===id).length};
+}
+$('group-delete').onclick=()=>{
+  const id=$('group-edit-id').value;if(!id||id==='その他')return;
+  const next=categoryStateCopy(),g=next.groupSettings.find(g=>g.id===id);if(!g)return;
+  const usage=groupUsage(next,id);
+  if(!usage.categories&&!usage.records){
+    if(!confirm(`「${g.label}」を完全に削除しますか？`))return;
+    next.groupSettings=next.groupSettings.filter(x=>x.id!==id);next.groupSettings.sort((a,b)=>a.order-b.order).forEach((x,i)=>x.order=i);
+    if(save(next)){$('group-edit-dialog').close();renderGroupManager();render();message('活動グループを削除しました。');}return;
+  }
+  pendingGroupDeleteId=id;$('group-delete-summary').textContent=`「${g.label}」は使用中です。\n所属カテゴリ：${usage.categories}件 ／ 記録：${usage.records}件`;
+  syncGroupSelect('group-delete-target','その他',id);$('group-delete-error').textContent='';$('group-edit-dialog').close();$('group-delete-dialog').showModal();
+};
+function closeGroupDelete(){$('group-delete-dialog').close();pendingGroupDeleteId=null;}
+$('group-delete-close').onclick=closeGroupDelete;$('group-delete-cancel').onclick=closeGroupDelete;$('group-delete-dialog').oncancel=e=>{e.preventDefault();closeGroupDelete();};
+$('group-delete-confirm').onclick=()=>{
+  try{
+    const id=pendingGroupDeleteId,target=$('group-delete-target').value,next=categoryStateCopy(),g=next.groupSettings.find(g=>g.id===id),replacement=next.groupSettings.find(g=>g.id===target);
+    if(!g||!replacement||id===target)throw new Error('移動先の活動グループを選んでください。');
+    if(!confirm(`「${g.label}」のカテゴリと記録を「${replacement.label}」へ移動し、元のグループを削除しますか？\nこの操作前にJSONバックアップを保存してください。`))return;
+    next.categorySettings.forEach(c=>{if(c.group===id)c.group=target;});next.records.forEach(r=>{if(r.group===id)r.group=target;});if(next.active?.group===id)next.active.group=target;if(next.exercise?.record.group===id)next.exercise.record.group=target;
+    next.groupSettings=next.groupSettings.filter(x=>x.id!==id);next.groupSettings.sort((a,b)=>a.order-b.order).forEach((x,i)=>x.order=i);
+    if(save(next)){closeGroupDelete();syncCategoryOptions();renderGroupManager();renderCategoryManager();render();message('カテゴリと記録を移動し、活動グループを削除しました。');}
+  }catch(error){$('group-delete-error').textContent=error.message;}
 };
 
 function download(text,name){const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
