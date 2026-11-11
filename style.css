@@ -30,6 +30,7 @@ input,select,textarea{max-width:100%;min-inline-size:0}
   .group-grid,.daily-groups>div{grid-template-columns:repeat(2,minmax(0,1fr))}
   .section-head>label{max-width:100%;min-width:0}
 }
+
 @media(max-width:430px){
   .summary{grid-template-columns:minmax(0,1fr)}
   .stat{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -39,6 +40,7 @@ input,select,textarea{max-width:100%;min-inline-size:0}
   .record strong{font-size:18px}
   .section-head{gap:12px}
 }
+
 @media(max-width:380px){
   /* さらに狭い画面では日付を4列にし、44px以上のタップ幅を確保。 */
   .calendar{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
@@ -73,3 +75,11 @@ button.edit-close{display:flex;align-items:center;justify-content:center;width:4
   .category-management{align-items:stretch;flex-direction:column}.category-management button{width:100%}
   .manage-row{grid-template-columns:minmax(0,1fr)}.manage-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.manage-actions button{min-height:44px}
 }
+
+/* タイマー操作だけを、iPhoneでも判別しやすいビビッド配色にする。 */
+.timer-actions button{border-radius:12px;font-size:16px;font-weight:700;letter-spacing:.02em}
+.timer-actions #pause:not(:disabled){border-color:#F4BD28;background:#F4BD28;color:#263b32}
+.timer-actions #resume:not(:disabled),.timer-actions #stop:not(:disabled){border-color:#007C62;background:#007C62;color:#fff}
+.timer-actions #discard:not(:disabled){border-color:#D64555;background:#D64555;color:#fff}
+.timer-actions #modify:not(:disabled){border-color:#2859B5;background:#2859B5;color:#fff}
+.timer-actions button:disabled{border-color:#d5d7d3;background:#e4e5e2;color:#7b807b;opacity:1}
