@@ -12,6 +12,7 @@ const localInput = ms => { const d = new Date(ms); return `${dateKey(d)}T${pad(d
 const clock = ms => { const s = Math.floor(ms / 1000); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; };
 const hours = ms => { const m = Math.floor(ms / 60000); return `${Math.floor(m / 60)}時間${pad(m % 60)}分`; };
 const timestamp = ms => new Date(ms).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+const timeOnly = ms => new Date(ms).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
 const settings = () => state.categorySettings || W.defaultSettings();
 const categoryLabel = id => W.categoryLabel(id, settings());
 const groupOf = id => W.groupOf(id, settings());
@@ -103,7 +104,7 @@ function renderCalendar() {
     button.append(String(day));
     const value=document.createElement('span'); value.textContent=total>0 ? hours(total).replace('時間','h ').replace('分','m') : '—';
     button.append(value);
-    button.onclick=()=>{ $('selected-day').value=key; renderCalendar(); renderRecords(); };
+    button.onclick=()=>{ $('selected-day').value=key; renderCalendar(); renderRecords(); $('daily-records-section').scrollIntoView({behavior:'smooth',block:'start'}); };
     calendar.append(button);
   }
   $('category-period').textContent=`${y}年${m}月の実働時間（計測中も含む）`;
@@ -150,11 +151,13 @@ function renderRecords() {
     const d=W.duration(r);const article=document.createElement('article');article.className='record';
     const head=document.createElement('div');head.className='record-head';
     const title=document.createElement('h3');title.textContent=categoryLabel(r.category)+(r.end===null?' ・計測中':'');
-    const work=document.createElement('strong');work.textContent='当日の実働 '+clock(W.workIn(r,from,to));head.append(title,work);
-    const times=document.createElement('p');times.className='muted';times.textContent=`開始 ${timestamp(r.start)} ／ 終了 ${r.end===null?'計測中':timestamp(r.end)}`;
+    const work=document.createElement('strong');work.textContent='実働 '+clock(W.workIn(r,from,to));head.append(title,work);
+    const times=document.createElement('p');times.className='record-time';
+    const crossesDay=r.end!==null && dateKey(new Date(r.start))!==dateKey(new Date(r.end));
+    times.textContent=r.end===null ? `${timeOnly(r.start)}〜計測中` : crossesDay ? `${timestamp(r.start)}〜${timestamp(r.end)}` : `${timeOnly(r.start)}〜${timeOnly(r.end)}`;
     const detail=document.createElement('p');detail.className='muted';detail.textContent=`記録全体の実働時間：${clock(d.work)}`;
     const memo=document.createElement('p');memo.className='memo';memo.textContent=r.memo;
-    article.append(head,times,detail,memo);
+    article.append(head,times);if(crossesDay)article.append(detail);if(r.memo)article.append(memo);
     if(r.end!==null){
       const actions=document.createElement('div');actions.className='actions';const edit=document.createElement('button');edit.className='outline';edit.textContent='編集';edit.disabled=locked;edit.onclick=()=>openEdit(r);
       const del=document.createElement('button');del.className='danger';del.textContent='削除';del.disabled=locked;
